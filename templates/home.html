@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Кинотека</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 0;
+        }
+        .auth-buttons {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+        }
+        .auth-buttons a {
+            margin-left: 10px;
+            padding: 8px 15px;
+            text-decoration: none;
+            color: white;
+            background-color: #4CAF50;
+            border-radius: 4px;
+        }
+        .auth-buttons a:hover {
+            background-color: #45a049;
+        }
+        .section {
+            margin: 30px 20px;
+        }
+        .section-title {
+            font-size: 24px;
+            margin-bottom: 15px;
+            color: #333;
+        }
+        .movies-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 20px;
+            padding: 10px 0;
+        }
+        .genres-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 15px;
+            padding: 10px 0;
+            margin-bottom: 30px;
+        }
+        .genre-tag {
+            padding: 8px 15px;
+            background-color: #f0f0f0;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+        }
+        .genre-tag:hover {
+            background-color: #4CAF50;
+            color: white;
+            transform: scale(1.05);
+        }
+        .movie-card {
+            min-width: 200px;
+            text-align: center;
+            cursor: pointer;
+            transition: transform 0.3s;
+        }
+        .movie-card:hover {
+            transform: scale(1.05);
+        }
+        .movie-poster {
+            width: 150px;
+            height: 225px;
+            object-fit: cover;
+            border-radius: 5px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .movie-rating {
+            color: gold;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+    </style>
+</head>
+<body>
+    <div class="auth-buttons">
+        <a href="/login">Войти</a>
+        <a href="/register">Зарегистрироваться</a>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Популярные жанры</h2>
+        <div class="genres-container">
+            {% for genre in genres %}
+            <div class="genre-tag" onclick="window.location.href='/genre/{{ genre }}'">
+                {{ genre }}
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="section">
+        <h2 class="section-title">Топ-10 фильмов</h2>
+        <div class="movies-container">
+            {% for movie in movies %}
+            <div class="movie-card" onclick="window.location.href='/movie/{{ movie[0] }}'">
+                <img src="{{ movie[3] }}" alt="{{ movie[1] }}" class="movie-poster">
+                <h3>{{ movie[1] }}</h3>
+                <div class="movie-rating">★ {{ movie[2] }}</div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</body>
+</html>
