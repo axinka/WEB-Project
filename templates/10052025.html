@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Загрузка изображения</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            text-align: center;
+            margin: 20px;
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+        }
+        #canvas {
+            width: 200px;
+            height: 200px;
+            border: 1px solid #000;
+            border-radius: 50%;
+            display: none;
+        }
+        button {
+            margin-top: 20px;
+            padding: 10px 20px;
+            background-color: #4CAF50;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        button:hover {
+            background-color: #45a049;
+        }
+    </style>
+</head>
+<body>
+    <h1>Загрузите изображение</h1>
+    <input type="file" id="fileInput" accept="image/*">
+    <canvas id="canvas"></canvas>
+    <button id="saveBtn" style="display:none;">Сохранить в БД</button>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const canvas = document.getElementById('canvas');
+        const saveBtn = document.getElementById('saveBtn');
+        const ctx = canvas.getContext('2d');
+        const outputSize = 200;
+
+        canvas.width = outputSize;
+        canvas.height = outputSize;
+
+        fileInput.addEventListener('change', function() {
+            const file = fileInput.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    const img = new Image();
+                    img.onload = function() {
+                        ctx.clearRect(0, 0, canvas.width, canvas.height);
+                        ctx.beginPath();
+                        ctx.arc(outputSize/2, outputSize/2, outputSize/2, 0, Math.PI * 2);
+                        ctx.closePath();
+                        ctx.clip();
+
+                        const scale = Math.max(outputSize / img.width, outputSize / img.height);
+                        const x = (outputSize - img.width * scale) / 2;
+                        const y = (outputSize - img.height * scale) / 2;
+
+                        ctx.drawImage(img, x, y, img.width * scale, img.height * scale);
+
+                        canvas.style.display = 'block';
+                        saveBtn.style.display = 'block';
+                    }
+                    img.src = event.target.result;
+                }
+                reader.readAsDataURL(file);
+            }
+        });
+
+        saveBtn.addEventListener('click', async function() {
+            canvas.toBlob(async function(blob) {
+                const formData = new FormData();
+                formData.append('image', blob, 'avatar.png');
+
+                try {
+                    const response = await fetch('/save-image', {
+                        method: 'POST',
+                        body: formData
+                    });
+
+                    const result = await response.json();
+                    if (result.success) {
+                        alert('Изображение успешно сохранено!');
+                    } else {
+                        alert('Ошибка при сохранении: ' + result.message);
+                    }
+                } catch (error) {
+                    console.error('Ошибка:', error);
+                    alert('Произошла ошибка при отправке данных');
+                }
+            }, 'image/png');
+        });
+    </script>
+</body>
+</html>

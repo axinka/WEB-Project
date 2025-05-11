@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+
+{% block content %}
+<h2>Результаты поиска: "{{query}}"</h2>
+<div class="movies-grid">
+    {% for name, film in results %}
+    <div class="movie-card" onclick="window.location.href='{{ url_for('film', film_name=name) }}'">
+        <img src="{{ film.picture }}" alt="{{ name }}" class="movie-poster">
+        <div class="movie-info">
+            <div class="movie-title">{{ film.sh_name }}</div>
+            <div class="movie-meta">
+                <span>{{ film.year }}</span>
+                <span>★ {{ film.rating }}</span>
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}

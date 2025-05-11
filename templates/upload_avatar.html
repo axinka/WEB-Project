@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}Загрузка аватара{% endblock %}
+
+{% block styles %}
+<style>
+    .upload-container {
+        max-width: 600px;
+        margin: 30px auto;
+        padding: 30px;
+        background-color: #1e1e1e;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        text-align: center;
+    }
+    
+    #canvas {
+        width: 200px;
+        height: 200px;
+        border-radius: 50%;
+        border: 3px solid #6a5acd;
+        margin: 20px auto;
+        display: none;
+    }
+    
+    .upload-btn {
+        background-color: #6a5acd;
+        color: white;
+        padding: 10px 20px;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+        font-size: 16px;
+        margin-top: 20px;
+        transition: background-color 0.3s;
+    }
+    
+    .upload-btn:hover {
+        background-color: #5a4acd;
+    }
+    
+    .file-input {
+        display: none;
+    }
+    
+    .file-label {
+        display: inline-block;
+        padding: 10px 20px;
+        background-color: #4CAF50;
+        color: white;
+        border-radius: 5px;
+        cursor: pointer;
+        margin-bottom: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="upload-container">
+    <h1>Загрузите аватар</h1>
+    
+    <label for="imageInput" class="file-label">
+        <i class="fas fa-camera"></i> Выбрать изображение
+    </label>
+    <input type="file" id="imageInput" class="file-input" accept="image/*">
+    
+    <canvas id="canvas"></canvas>
+    
+    <button id="uploadBtn" class="upload-btn" disabled>
+        <i class="fas fa-upload"></i> Загрузить аватар
+    </button>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const imageInput = document.getElementById('imageInput');
+    const canvas = document.getElementById('canvas');
+    const ctx = canvas.getContext('2d');
+    const uploadBtn = document.getElementById('uploadBtn');
+    let croppedImage = null;
+
+    imageInput.addEventListener('change', function() {
+        const file = imageInput.files[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onload = function(event) {
+                const img = new Image();
+                img.onload = function() {
+                    // Устанавливаем размер canvas для круглого аватара
+                    const size = Math.min(img.width, img.height);
+                    canvas.width = 200;
+                    canvas.height = 200;
+                    
+                    // Обрезаем изображение по центру и делаем круглым
+                    ctx.save();
+                    ctx.beginPath();
+                    ctx.arc(100, 100, 100, 0, Math.PI * 2, true);
+                    ctx.closePath();
+                    ctx.clip();
+                    
+                    const ratio = size / 200;
+                    ctx.drawImage(img,
+                        (img.width - size) / 2,
+                        (img.height - size) / 2,
+                        size, size,
+                        0, 0,
+                        200, 200);
+                    
+                    ctx.restore();
+                    canvas.style.display = 'block';
+                    uploadBtn.disabled = false;
+                    croppedImage = canvas.toDataURL('image/jpeg');
+                }
+                img.src = event.target.result;
+            }
+            reader.readAsDataURL(file);
+        }
+    });
+
+    uploadBtn.addEventListener('click', async function() {
+        if (!croppedImage) return;
+        
+        this.disabled = true;
+        this.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Загрузка...';
+        
+        try {
+            // Отправляем обрезанное изображение на сервер
+            const blob = await fetch(croppedImage).then(r => r.blob());
+            const formData = new FormData();
+            formData.append('avatar', blob, 'avatar.jpg');
+            
+            const response = await fetch('/upload-avatar', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token() }}'
+                },
+                credentials: 'include'
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                alert('Аватар успешно загружен!');
+                window.location.href = "{{ url_for('profile') }}";
+            } else {
+                throw new Error(data.error || 'Ошибка загрузки');
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Ошибка: ' + error.message);
+            this.innerHTML = '<i class="fas fa-upload"></i> Загрузить аватар';
+            this.disabled = false;
+        }
+    });
+});
+</script>
+{% endblock %}

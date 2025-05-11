@@ -1,0 +1,32 @@
+{% extends "auth_form.html" %}
+
+{% block form_title %}Регистрация{% endblock %}
+
+{% block form_content %}
+<form method="POST" action="{{ url_for('register') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-group">
+        <label for="username">Имя пользователя</label>
+        <input type="text" id="username" name="username" required>
+    </div>
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+    </div>
+    <div class="form-group">
+        <label for="password">Пароль (минимум 8 символов)</label>
+        <input type="password" id="password" name="password" required minlength="8">
+    </div>
+    <button type="submit" class="submit-btn">Зарегистрироваться</button>
+</form>
+{% endblock %}
+
+{% block auth_link %}
+<div class="auth-link">
+    Уже есть аккаунт? <a href="{{ url_for('login') }}">Войдите</a>
+    <div style="margin-top: 15px;">
+        <a href="{{ url_for('index') }}" class="home-button">Назад к фильмам</a>
+    </div>
+</div>
+{% endblock %}
