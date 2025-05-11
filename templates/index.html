@@ -56,24 +56,58 @@
     .pagination a:hover {
         background-color: #4CAF50;
     }
+    .pagination .active {
+        background-color: #6a5acd;
+        pointer-events: none;
+    }
+    .pagination .nav {
+        background-color: #444;
+    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="movies-grid">
-    {% for page in pages %}
-        {% for movie in page %}
-            <div class="movie-card" onclick="window.location.href='{{ url_for('film', film_name=movie.name) }}'">
-                <img src="{{ movie.picture }}" alt="{{ movie.name }}" class="movie-poster">
+    {% if movies %}
+        {% for movie in movies %}
+            <div class="movie-card" onclick="window.location.href='{{ url_for('film', film_name=movie[1]) }}'">
+                <img src="{{ movie[2] if movie[2].startswith('http') else url_for('static', filename='uploads/movies/' + movie[2]) }}"
+                     alt="{{ movie[1] }}"
+                     class="movie-poster">
                 <div class="movie-info">
-                    <div class="movie-title">{{ movie.sh_name }}</div>
+                    <div class="movie-title">{{ movie[1] if movie[1]|length < 34 else movie[1][:31] + '...' }}</div>
                     <div class="movie-meta">
-                        <span>{{ movie.year }}</span>
-                        <span>★ {{ movie.rating }}</span>
+                        <span>{{ movie[4] }}</span>
+                        <span>★ {{ movie[3] if movie[3] else 'N/A' }}</span>
                     </div>
                 </div>
             </div>
         {% endfor %}
-    {% endfor %}
+    {% else %}
+        <p>Фильмы не найдены</p>
+    {% endif %}
 </div>
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="{{ url_for('index', page=1) }}" class="nav">&laquo; Первая</a>
+        <a href="{{ url_for('index', page=page-1) }}" class="nav">&lt; Предыдущая</a>
+    {% endif %}
+
+    {% set start = page - 2 if page - 2 > 0 else 1 %}
+    {% set end = page + 2 if page + 2 <= total_pages else total_pages %}
+    {% for p in range(start, end + 1) %}
+        {% if p == page %}
+            <a class="active">{{ p }}</a>
+        {% else %}
+            <a href="{{ url_for('index', page=p) }}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+        <a href="{{ url_for('index', page=page+1) }}" class="nav">Следующая &gt;</a>
+        <a href="{{ url_for('index', page=total_pages) }}" class="nav">Последняя &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
 {% endblock %}

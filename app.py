@@ -29,6 +29,7 @@ ALLOWED_EXTENSIONS = {'png', 'jpg', 'jpeg', 'gif'}
 def allowed_file(filename):
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
 # При инициализации БД
 def init_db():
     conn = sqlite3.connect('movies.db')
@@ -63,7 +64,7 @@ def init_db():
     conn.commit()
     conn.close()
 
-# Функция для получения списка фильмов
+# Функция для получения всех фильмов в виде словаря
 def get_movies():
     conn = sqlite3.connect('movies.db')
     cur = conn.cursor()
@@ -88,6 +89,28 @@ def get_movies():
             }
     return movies_dict
 
+# Функция для получения фильмов с пагинацией для главной страницы
+def get_paginated_movies(page=1, per_page=30):
+    conn = sqlite3.connect('movies.db')
+    try:
+        cur = conn.cursor()
+        offset = (page - 1) * per_page
+        cur.execute('''SELECT id, name, picture, rating, year 
+                       FROM movies 
+                       LIMIT ? OFFSET ?''', (per_page, offset))
+        movies = cur.fetchall()
+
+        # Получаем общее количество фильмов для пагинации
+        cur.execute('SELECT COUNT(*) FROM movies')
+        total = cur.fetchone()[0]
+        total_pages = (total + per_page - 1) // per_page
+
+        return movies, total_pages
+    except sqlite3.Error as e:
+        print(f"Ошибка при получении фильмов: {e}")
+        return [], 0
+    finally:
+        conn.close()
 
 # Функция для получения карты страны
 def get_country_map(country):
@@ -116,10 +139,6 @@ def get_country_map(country):
         print(f"Ошибка при получении карты: {e}")
     return None
 
-
-
-
-
 # Добавление фильма в просмотренные
 def add_watched_movie(user_id, movie_id):
     conn = sqlite3.connect('movies.db')
@@ -135,20 +154,31 @@ def add_watched_movie(user_id, movie_id):
     finally:
         conn.close()
 
-
-# Получение списка просмотренных фильмов
-def get_watched_movies(user_id):
+# Получение списка просмотренных фильмов с пагинацией
+def get_watched_movies(user_id, page=1, per_page=30):
     conn = sqlite3.connect('movies.db')
     try:
         cur = conn.cursor()
-        cur.execute('''SELECT m.id, m.name, m.picture 
+        offset = (page - 1) * per_page
+        cur.execute('''SELECT m.id, m.name, m.picture, m.rating, m.year 
                        FROM movies m
                        JOIN watched_movies wm ON m.id = wm.movie_id
+                       WHERE wm.user_id = ?
+                       LIMIT ? OFFSET ?''', (user_id, per_page, offset))
+        movies = cur.fetchall()
+
+        # Получаем общее количество фильмов для пагинации
+        cur.execute('''SELECT COUNT(*) 
+                       FROM watched_movies wm
+                       JOIN movies m ON m.id = wm.movie_id
                        WHERE wm.user_id = ?''', (user_id,))
-        return cur.fetchall()
+        total = cur.fetchone()[0]
+        total_pages = (total + per_page - 1) // per_page
+
+        return movies, total_pages
     except sqlite3.Error as e:
         print(f"Ошибка при получении просмотренных фильмов: {e}")
-        return []
+        return [], 0
     finally:
         conn.close()
 
@@ -156,30 +186,30 @@ def get_average_rating(user_id):
     conn = sqlite3.connect('movies.db')
     try:
         cur = conn.cursor()
-        cur.execute('''SELECT AVG(m.rating) 
+        cur.execute('''SELECT COALESCE(AVG(m.rating), 0.0) 
                        FROM movies m
                        JOIN watched_movies w ON m.id = w.movie_id
                        WHERE w.user_id = ?''', (user_id,))
-        return cur.fetchone()[0]
+        result = cur.fetchone()[0]
+        print(f"Average rating for user {user_id}: {result}")  # Отладочный вывод
+        return result if result is not None else 0.0
     finally:
         conn.close()
 
 # Добавление/удаление из избранного
 def toggle_favorite_movie(user_id, movie_id):
-    conn = sqlite3.connect('movies.db')
+    conn = None
     try:
+        conn = sqlite3.connect('movies.db')
         cur = conn.cursor()
 
-        # Проверяем, есть ли уже в избранном
         cur.execute("SELECT 1 FROM favorites WHERE user_id = ? AND movie_id = ?",
                     (user_id, movie_id))
         if cur.fetchone():
-            # Удаляем из избранного
             cur.execute("DELETE FROM favorites WHERE user_id = ? AND movie_id = ?",
                         (user_id, movie_id))
             action = 'removed'
         else:
-            # Добавляем в избранное
             cur.execute("INSERT INTO favorites (user_id, movie_id) VALUES (?, ?)",
                         (user_id, movie_id))
             action = 'added'
@@ -187,42 +217,72 @@ def toggle_favorite_movie(user_id, movie_id):
         conn.commit()
         return action
     except sqlite3.Error as e:
+        if conn:
+            conn.rollback()
         print(f"Ошибка при работе с избранным: {e}")
         return 'error'
     finally:
-        conn.close()
+        if conn:
+            conn.close()
 
-
-# Получение списка избранных фильмов
-def get_favorite_movies(user_id):
+# Получение списка избранных фильмов с пагинацией
+def get_favorite_movies(user_id, page=1, per_page=30):
     conn = sqlite3.connect('movies.db')
     try:
         cur = conn.cursor()
-        cur.execute('''SELECT m.id, m.name, m.picture, m.rating 
+        offset = (page - 1) * per_page
+        cur.execute('''SELECT m.id, m.name, m.picture, m.rating, m.year 
                        FROM movies m
                        JOIN favorites f ON m.id = f.movie_id
+                       WHERE f.user_id = ?
+                       LIMIT ? OFFSET ?''', (user_id, per_page, offset))
+        movies = cur.fetchall()
+
+        # Получаем общее количество фильмов для пагинации
+        cur.execute('''SELECT COUNT(*) 
+                       FROM favorites f
+                       JOIN movies m ON m.id = f.movie_id
                        WHERE f.user_id = ?''', (user_id,))
-        return cur.fetchall()
+        total = cur.fetchone()[0]
+        total_pages = (total + per_page - 1) // per_page
+
+        return movies, total_pages
     except sqlite3.Error as e:
         print(f"Ошибка при получении избранных фильмов: {e}")
-        return []
+        return [], 0
     finally:
         conn.close()
 
-# Главная страница
+# Удаление фильма из просмотренных
+def remove_watched_movie(user_id, movie_id):
+    conn = None
+    try:
+        conn = sqlite3.connect('movies.db')
+        cur = conn.cursor()
+        cur.execute("DELETE FROM watched_movies WHERE user_id = ? AND movie_id = ?",
+                    (user_id, movie_id))
+        conn.commit()
+        return True
+    except sqlite3.Error as e:
+        if conn:
+            conn.rollback()
+        print(f"Ошибка при удалении из просмотренных: {e}")
+        return False
+    finally:
+        if conn:
+            conn.close()
+
+# Главная страница с пагинацией
 @app.route('/')
 def index():
-    movies = get_movies()
-    movies_list = list(movies.values())
-
-    # Разбиваем на страницы по 8 фильмов
-    per_page = 8
-    pages = [movies_list[i:i + per_page] for i in range(0, len(movies_list), per_page)]
+    page = request.args.get('page', 1, type=int)
+    movies, total_pages = get_paginated_movies(page, 30)
 
     return render_template('index.html',
-                           pages=pages,
+                           movies=movies,
+                           total_pages=total_pages,
+                           page=page,
                            current_user=session.get('username'))
-
 
 # Страница фильма
 @app.route('/film/<film_name>')
@@ -236,26 +296,34 @@ def film(film_name):
 
     # Рассчитываем высоту блока описания
     desc_len = len(film_data['description'])
-    height = max(100, (desc_len // 100) * 20)  # Примерная высота
+    height = max(100, (desc_len // 100) * 20)
 
     is_favorite = False
+    is_watched = False
     if 'username' in session:
         conn = sqlite3.connect('movies.db')
         cur = conn.cursor()
         cur.execute("SELECT id FROM users WHERE username = ?", (session['username'],))
         user = cur.fetchone()
         if user:
+            # Проверяем, добавлен ли фильм в избранное
             cur.execute("SELECT 1 FROM favorites WHERE user_id = ? AND movie_id = ?",
                         (user[0], film_data['id']))
             is_favorite = bool(cur.fetchone())
+
+            # Проверяем, просмотрен ли фильм
+            cur.execute("SELECT 1 FROM watched_movies WHERE user_id = ? AND movie_id = ?",
+                        (user[0], film_data['id']))
+            is_watched = bool(cur.fetchone())
         conn.close()
+
     return render_template('film.html',
                            film=film_data,
                            is_favorite=is_favorite,
+                           is_watched=is_watched,
                            map_image=map_image,
                            desc_height=f"{height}px",
                            current_user=session.get('username'))
-
 
 # Авторизация
 @app.route('/login', methods=['GET', 'POST'])
@@ -277,7 +345,6 @@ def login():
             flash('Неверное имя пользователя или пароль', 'error')
 
     return render_template('login.html')
-
 
 # Регистрация
 @app.route('/register', methods=['GET', 'POST'])
@@ -318,13 +385,11 @@ def register():
 
     return render_template('register.html')
 
-
 # Выход
 @app.route('/logout')
 def logout():
     session.pop('username', None)
     return redirect(url_for('index'))
-
 
 @app.route('/check-film')
 def check_film():
@@ -342,7 +407,6 @@ def check_film():
             return jsonify({'exists': True, 'film_name': film_name})
 
     return jsonify({'exists': False})
-
 
 @app.route('/search')
 def search():
@@ -366,7 +430,6 @@ def search():
     return render_template('search_results.html',
                            results=results,
                            query=query)
-
 
 @app.route('/search-suggest')
 def search_suggest():
@@ -397,7 +460,6 @@ def search_suggest():
         'exactMatch': exact_match
     })
 
-
 @app.route('/profile')
 def profile():
     if 'username' not in session:
@@ -416,9 +478,11 @@ def profile():
         flash('Пользователь не найден', 'error')
         return redirect(url_for('login'))
 
-    # Получаем избранные и просмотренные фильмы
-    favorite_movies = get_favorite_movies(user[0])
-    watched_movies = get_watched_movies(user[0])
+    # Получаем избранные и просмотренные фильмы с пагинацией
+    favorite_page = request.args.get('favorite_page', 1, type=int)
+    watched_page = request.args.get('watched_page', 1, type=int)
+    favorite_movies, favorite_total_pages = get_favorite_movies(user[0], favorite_page, 30)
+    watched_movies, watched_total_pages = get_watched_movies(user[0], watched_page, 30)
 
     # Получаем статистику
     cur.execute("SELECT COUNT(*) FROM watched_movies WHERE user_id = ?", (user[0],))
@@ -439,17 +503,28 @@ def profile():
         'favorites_count': favorites_count
     }
 
-    return render_template('profile.html',
-                           current_user=user_data,
-                           favorite_movies=favorite_movies,
-                           watched_movies=watched_movies, average_rating=get_average_rating(user_data['id']))
-
+    # Предотвращаем кэширование страницы
+    response = render_template('profile.html',
+                               current_user=user_data,
+                               favorite_movies=favorite_movies,
+                               favorite_total_pages=favorite_total_pages,
+                               favorite_page=favorite_page,
+                               watched_movies=watched_movies,
+                               watched_total_pages=watched_total_pages,
+                               watched_page=watched_page,
+                               average_rating=get_average_rating(user_data['id']))
+    response = app.make_response(response)
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 # Маршрут для добавления в просмотренные
 @app.route('/add-watched/<int:movie_id>', methods=['POST'])
 def add_watched(movie_id):
     if 'username' not in session:
-        return jsonify({'error': 'Требуется авторизация'}), 401
+        flash('Требуется авторизация', 'error')
+        return redirect(url_for('login'))
 
     conn = None
     try:
@@ -460,75 +535,150 @@ def add_watched(movie_id):
         cur.execute("SELECT id FROM users WHERE username = ?", (session['username'],))
         user = cur.fetchone()
         if not user:
-            return jsonify({'error': 'Пользователь не найден'}), 404
+            flash('Пользователь не найден', 'error')
+            return redirect(url_for('index'))
 
         # 2. Проверяем существование фильма
-        cur.execute("SELECT 1 FROM movies WHERE id = ?", (movie_id,))
-        if not cur.fetchone():
-            return jsonify({'error': 'Фильм не найден'}), 404
+        cur.execute("SELECT name FROM movies WHERE id = ?", (movie_id,))
+        movie = cur.fetchone()
+        if not movie:
+            flash('Фильм не найден', 'error')
+            return redirect(url_for('index'))
 
         # 3. Добавляем в просмотренные (если еще не добавлен)
-        cur.execute(
-            "INSERT OR IGNORE INTO watched_movies (user_id, movie_id) VALUES (?, ?)",
-            (user[0], movie_id)
-        )
-        conn.commit()
+        success = add_watched_movie(user[0], movie_id)
+        if success:
+            flash('Фильм добавлен в просмотренные', 'success')
+        else:
+            flash('Фильм уже в просмотренных', 'info')
 
-        # 4. Возвращаем успешный ответ
-        return jsonify({
-            'success': True,
-            'message': 'Фильм добавлен в просмотренные'
-        })
+        # Перенаправляем обратно на страницу фильма
+        return redirect(url_for('film', film_name=movie[0]))
 
     except sqlite3.Error as e:
         if conn:
             conn.rollback()
-        return jsonify({'error': f'Ошибка базы данных: {str(e)}'}), 500
+        flash(f'Ошибка базы данных: {str(e)}', 'error')
+        return redirect(url_for('index'))
     finally:
         if conn:
             conn.close()
-            
+
 # Маршрут для работы с избранным
 @app.route('/toggle-favorite/<int:movie_id>', methods=['POST'])
 def toggle_favorite(movie_id):
     if 'username' not in session:
-        return jsonify({'error': 'Требуется авторизация'}), 401
-
-    conn = sqlite3.connect('movies.db')
-    cur = conn.cursor()
-    cur.execute("SELECT id FROM users WHERE username = ?", (session['username'],))
-    user = cur.fetchone()
-    conn.close()
-
-    if not user:
-        return jsonify({'error': 'Пользователь не найден'}), 404
-
-    action = toggle_favorite_movie(user[0], movie_id)
-    if action in ['added', 'removed']:
-        return jsonify({'success': True, 'action': action})
-    else:
-        return jsonify({'error': 'Ошибка при обновлении избранного'}), 500
-
-@app.route('/upload-avatar-page')
-def upload_avatar_page():
-    if 'username' not in session:
+        flash('Требуется авторизация', 'error')
         return redirect(url_for('login'))
-    return render_template('upload_avatar.html')
 
+    conn = None
+    try:
+        conn = sqlite3.connect('movies.db')
+        cur = conn.cursor()
+
+        # Проверка пользователя
+        cur.execute("SELECT id FROM users WHERE username = ?", (session['username'],))
+        user = cur.fetchone()
+        if not user:
+            flash('Пользователь не найден', 'error')
+            return redirect(url_for('index'))
+
+        # Проверка существования фильма
+        cur.execute("SELECT name FROM movies WHERE id = ?", (movie_id,))
+        movie = cur.fetchone()
+        if not movie:
+            flash('Фильм не найден', 'error')
+            return redirect(url_for('index'))
+
+        # Вызов функции toggle_favorite_movie
+        action = toggle_favorite_movie(user[0], movie_id)
+        if action in ['added', 'removed']:
+            flash('Фильм добавлен в избранное' if action == 'added' else 'Фильм удалён из избранного', 'success')
+        else:
+            flash('Ошибка при обновлении избранного', 'error')
+
+        # Перенаправляем обратно на страницу фильма
+        return redirect(url_for('film', film_name=movie[0]))
+
+    except sqlite3.Error as e:
+        print(f"Ошибка в маршруте toggle_favorite: {e}, movie_id: {movie_id}")
+        flash(f'Ошибка базы данных: {str(e)}', 'error')
+        return redirect(url_for('index'))
+    finally:
+        if conn:
+            conn.close()
+
+# Маршрут для удаления из просмотренных
+@app.route('/remove-watched/<int:movie_id>', methods=['POST'])
+def remove_watched(movie_id):
+    if 'username' not in session:
+        flash('Требуется авторизация', 'error')
+        return redirect(url_for('login'))
+
+    conn = None
+    try:
+        conn = sqlite3.connect('movies.db')
+        cur = conn.cursor()
+
+        # 1. Получаем ID пользователя
+        cur.execute("SELECT id FROM users WHERE username = ?", (session['username'],))
+        user = cur.fetchone()
+        if not user:
+            flash('Пользователь не найден', 'error')
+            return redirect(url_for('index'))
+
+        # 2. Проверяем существование фильма
+        cur.execute("SELECT name FROM movies WHERE id = ?", (movie_id,))
+        movie = cur.fetchone()
+        if not movie:
+            flash('Фильм не найден', 'error')
+            return redirect(url_for('index'))
+
+        # 3. Проверяем существование записи
+        cur.execute("SELECT 1 FROM watched_movies WHERE user_id = ? AND movie_id = ?",
+                    (user[0], movie_id))
+        if not cur.fetchone():
+            flash('Фильм не найден в просмотренных', 'error')
+            return redirect(url_for('film', film_name=movie[0]))
+
+        # 4. Удаляем из просмотренных
+        success = remove_watched_movie(user[0], movie_id)
+        if success:
+            flash('Фильм удалён из просмотренных', 'success')
+        else:
+            flash('Ошибка при удалении из просмотренных', 'error')
+
+        # Перенаправляем обратно на страницу фильма
+        return redirect(url_for('film', film_name=movie[0]))
+
+    except sqlite3.Error as e:
+        if conn:
+            conn.rollback()
+        flash(f'Ошибка базы данных: {str(e)}', 'error')
+        return redirect(url_for('index'))
+    finally:
+        if conn:
+            conn.close()
+
+# Маршрут для загрузки аватара
 @app.route('/upload-avatar', methods=['POST'])
 def upload_avatar():
     if 'username' not in session:
-        return jsonify({'error': 'Требуется авторизация'}), 401
+        flash('Требуется авторизация', 'error')
+        return redirect(url_for('login'))
 
     if 'avatar' not in request.files:
-        return jsonify({'error': 'Файл не выбран'}), 400
+        flash('Файл не выбран', 'error')
+        return redirect(url_for('profile'))
 
     file = request.files['avatar']
     if file.filename == '':
-        return jsonify({'error': 'Файл не выбран'}), 400
+        flash('Файл не выбран', 'error')
+        return redirect(url_for('profile'))
 
     if not allowed_file(file.filename):
-        return jsonify({'error': 'Недопустимый формат файла'}), 400
+        flash('Недопустимый формат файла. Разрешены: png, jpg, jpeg, gif', 'error')
+        return redirect(url_for('profile'))
 
     try:
         # Генерируем уникальное имя файла
@@ -536,8 +686,17 @@ def upload_avatar():
         filename = f"{session['username']}_{uuid.uuid4().hex[:8]}.{ext}"
         filepath = os.path.join(AVATARS_FOLDER, filename)
 
+        # Проверяем, существует ли директория и доступна ли она для записи
+        if not os.path.exists(AVATARS_FOLDER):
+            os.makedirs(AVATARS_FOLDER)
+
         # Сохраняем файл
         file.save(filepath)
+
+        # Проверяем, что файл действительно сохранён
+        if not os.path.exists(filepath):
+            flash('Не удалось сохранить файл на сервере', 'error')
+            return redirect(url_for('profile'))
 
         # Обновляем БД
         conn = sqlite3.connect('movies.db')
@@ -547,16 +706,20 @@ def upload_avatar():
         conn.commit()
         conn.close()
 
-        return jsonify({
-            'success': True,
-            'avatar_url': url_for('static', filename=f'uploads/avatars/{filename}')
-        })
+        flash('Аватар успешно загружен!', 'success')
+        return redirect(url_for('profile'))
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
+        flash(f'Ошибка при загрузке аватара: {str(e)}', 'error')
+        return redirect(url_for('profile'))
 
 @app.route('/uploads/avatars/<filename>')
 def uploaded_avatar(filename):
-    return send_from_directory(AVATARS_FOLDER, filename)
+    # Предотвращаем кэширование изображения
+    response = send_from_directory(AVATARS_FOLDER, filename)
+    response.headers['Cache-Control'] = 'no-store, no-cache, must-revalidate, post-check=0, pre-check=0, max-age=0'
+    response.headers['Pragma'] = 'no-cache'
+    response.headers['Expires'] = '-1'
+    return response
 
 if __name__ == '__main__':
     init_db()
