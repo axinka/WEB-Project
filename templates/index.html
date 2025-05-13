@@ -1,0 +1,113 @@
+{% extends "base.html" %}
+
+{% block styles %}
+<style>
+    .movies-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        gap: 20px;
+        padding: 20px;
+    }
+    .movie-card {
+        background-color: #1e1e1e;
+        border-radius: 10px;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+        cursor: pointer;
+    }
+    .movie-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+    .movie-poster {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+    }
+    .movie-info {
+        padding: 15px;
+    }
+    .movie-title {
+        font-size: 1.1em;
+        margin-bottom: 5px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    .movie-meta {
+        display: flex;
+        justify-content: space-between;
+        color: #aaa;
+        font-size: 0.9em;
+    }
+    .pagination {
+        display: flex;
+        justify-content: center;
+        padding: 20px;
+        gap: 10px;
+    }
+    .pagination a {
+        color: white;
+        text-decoration: none;
+        padding: 8px 15px;
+        background-color: #333;
+        border-radius: 5px;
+    }
+    .pagination a:hover {
+        background-color: #4CAF50;
+    }
+    .pagination .active {
+        background-color: #6a5acd;
+        pointer-events: none;
+    }
+    .pagination .nav {
+        background-color: #444;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="movies-grid">
+    {% if movies %}
+        {% for movie in movies %}
+            <div class="movie-card" onclick="window.location.href='{{ url_for('film', film_name=movie['name']) }}'">
+                <img src="{{ movie['picture'] if movie['picture'].startswith('http') else url_for('static', filename='uploads/movies/' + movie['picture']) }}"
+                     alt="{{ movie['name'] }}"
+                     class="movie-poster">
+                <div class="movie-info">
+                    <div class="movie-title">{{ movie['name'] if movie['name']|length < 34 else movie['name'][:31] + '...' }}</div>
+                    <div class="movie-meta">
+                        <span>{{ movie['year'] }}</span>
+                        <span>★ {{ movie['rating'] if movie['rating'] else 'N/A' }}</span>
+                    </div>
+                </div>
+            </div>
+        {% endfor %}
+    {% else %}
+        <p>Фильмы не найдены</p>
+    {% endif %}
+</div>
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="{{ url_for('index', page=1) }}" class="nav">&laquo; Первая</a>
+        <a href="{{ url_for('index', page=page-1) }}" class="nav">&lt; Предыдущая</a>
+    {% endif %}
+
+    {% set start = page - 2 if page - 2 > 0 else 1 %}
+    {% set end = page + 2 if page + 2 <= total_pages else total_pages %}
+    {% for p in range(start, end + 1) %}
+        {% if p == page %}
+            <a class="active">{{ p }}</a>
+        {% else %}
+            <a href="{{ url_for('index', page=p) }}">{{ p }}</a>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+        <a href="{{ url_for('index', page=page+1) }}" class="nav">Следующая &gt;</a>
+        <a href="{{ url_for('index', page=total_pages) }}" class="nav">Последняя &raquo;</a>
+    {% endif %}
+</div>
+{% endif %}
+{% endblock %}

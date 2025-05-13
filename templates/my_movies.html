@@ -1,0 +1,174 @@
+{% extends "base.html" %}
+
+{% block title %}Мои фильмы{% endblock %}
+
+{% block styles %}
+<style>
+    .my-movies-container {
+        max-width: 1200px;
+        margin: 30px auto;
+        padding: 20px;
+    }
+    
+    .page-title {
+        color: #6a5acd;
+        margin-bottom: 30px;
+        text-align: center;
+    }
+    
+    .movies-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 25px;
+    }
+    
+    .movie-card {
+        background: #1e1e1e;
+        border-radius: 10px;
+        overflow: hidden;
+        transition: transform 0.3s, box-shadow 0.3s;
+    }
+    
+    .movie-card:hover {
+        transform: translateY(-5px);
+        box-shadow: 0 10px 20px rgba(0, 0, 0, 0.3);
+    }
+    
+    .movie-poster {
+        width: 100%;
+        height: 350px;
+        object-fit: cover;
+    }
+    
+    .movie-info {
+        padding: 15px;
+    }
+    
+    .movie-title {
+        font-size: 1.1em;
+        margin-bottom: 8px;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+    
+    .movie-meta {
+        display: flex;
+        justify-content: space-between;
+        color: #aaa;
+        font-size: 0.9em;
+        margin-bottom: 10px;
+    }
+    
+    .movie-actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 15px;
+    }
+    
+    .action-btn {
+        flex: 1;
+        padding: 8px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 0.85em;
+        transition: all 0.2s;
+    }
+    
+    .edit-btn {
+        background: #2196F3;
+        color: white;
+    }
+    
+    .edit-btn:hover {
+        background: #0b7dda;
+    }
+    
+    .delete-btn {
+        background: #f44336;
+        color: white;
+    }
+    
+    .delete-btn:hover {
+        background: #d32f2f;
+    }
+    
+    .empty-message {
+        text-align: center;
+        color: #aaa;
+        margin: 50px 0;
+        font-size: 1.2em;
+    }
+    
+    .add-movie-btn {
+        display: block;
+        width: 200px;
+        margin: 30px auto;
+        padding: 12px;
+        background: #4CAF50;
+        color: white;
+        text-align: center;
+        border-radius: 5px;
+        text-decoration: none;
+        transition: background 0.3s;
+    }
+    
+    .add-movie-btn:hover {
+        background: #45a049;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="my-movies-container">
+    <h1 class="page-title">Мои добавленные фильмы</h1>
+    
+    <a href="{{ url_for('add_movie') }}" class="add-movie-btn">
+        + Добавить новый фильм
+    </a>
+    
+    {% if movies %}
+    <div class="movies-grid">
+        {% for movie in movies %}
+        <div class="movie-card">
+            <img src="{{ movie.picture if movie.picture.startswith('http') else url_for('static', filename='uploads/movies/' + movie.picture) }}"
+                 alt="{{ movie.name }}"
+                 class="movie-poster"
+                 onclick="window.location.href='{{ url_for('film', film_name=movie.name) }}'">
+            
+            <div class="movie-info">
+                <div class="movie-title" onclick="window.location.href='{{ url_for('film', film_name=movie.name) }}'">
+                    {{ movie.name }}
+                </div>
+                
+                <div class="movie-meta">
+                    <span>{{ movie.year }}</span>
+                    <span>★ {{ movie.rating if movie.rating else 'N/A' }}</span>
+                </div>
+                
+                <div class="movie-actions">
+                    <button class="action-btn edit-btn"
+                            onclick="window.location.href='{{ url_for('edit_movie', movie_id=movie.id) }}'">
+                        Редактировать
+                    </button>
+                    
+                    <form method="POST" action="{{ url_for('delete_movie', movie_id=movie.id) }}"
+                          onsubmit="return confirm('Вы уверены, что хотите удалить этот фильм?');">
+                        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                        <button type="submit" class="action-btn delete-btn">
+                            Удалить
+                        </button>
+                    </form>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-message">
+        Вы еще не добавили ни одного фильма
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

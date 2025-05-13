@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block title %}Добавить новый фильм{% endblock %}
+
+{% block styles %}
+<style>
+    .add-movie-container {
+        max-width: 800px;
+        margin: 30px auto;
+        padding: 30px;
+        background-color: #1e1e1e;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .add-movie-container h2 {
+        color: #6a5acd;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #aaa;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        background-color: #252525;
+        border: 1px solid #333;
+        border-radius: 4px;
+        color: white;
+    }
+
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    .btn-submit {
+        background-color: #4CAF50;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        transition: background-color 0.3s;
+    }
+
+    .btn-submit:hover {
+        background-color: #45a049;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 20px;
+    }
+
+    .form-col {
+        flex: 1;
+    }
+
+    .error-message {
+        color: #ff5252;
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="add-movie-container">
+    <h2>Добавить новый фильм</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+            <label for="name">Название фильма *</label>
+            <input type="text" class="form-control" id="name" name="name" required>
+            {% if errors and 'name' in errors %}
+                <p class="error-message">{{ errors['name'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-row">
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="genre">Жанр *</label>
+                    <input type="text" class="form-control" id="genre" name="genre" required>
+                    {% if errors and 'genre' in errors %}
+                        <p class="error-message">{{ errors['genre'] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="year">Год выпуска *</label>
+                    <input type="number" class="form-control" id="year" name="year"
+                           min="1900" max="{{ current_year }}" required>
+                    {% if errors and 'year' in errors %}
+                        <p class="error-message">{{ errors['year'] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Описание *</label>
+            <textarea class="form-control" id="description" name="description" required></textarea>
+            {% if errors and 'description' in errors %}
+                <p class="error-message">{{ errors['description'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-row">
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="country">Страна *</label>
+                    <input type="text" class="form-control" id="country" name="country" required>
+                    {% if errors and 'country' in errors %}
+                        <p class="error-message">{{ errors['country'] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="rating">Рейтинг (0-10)</label>
+                    <input type="number" class="form-control" id="rating" name="rating"
+                           min="0" max="10" step="0.1">
+                    {% if errors and 'rating' in errors %}
+                        <p class="error-message">{{ errors['rating'] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="actors">Актеры (через запятую)</label>
+            <input type="text" class="form-control" id="actors" name="actors">
+            {% if errors and 'actors' in errors %}
+                <p class="error-message">{{ errors['actors'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-group">
+            <label for="picture">Постер фильма</label>
+            <input type="file" class="form-control" id="picture" name="picture" accept="image/*">
+            {% if errors and 'picture' in errors %}
+                <p class="error-message">{{ errors['picture'] }}</p>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn-submit">Добавить фильм</button>
+    </form>
+    {% if uploaded_image %}
+    <div class="preview">
+        <h3>Загруженный постер:</h3>
+        <img src="{{ url_for('static', filename='uploads/' + uploaded_image) }}" alt="Постер фильма">
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

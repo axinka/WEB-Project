@@ -1,0 +1,265 @@
+{% extends "base.html" %}
+
+{% block title %}{{ film.name }}{% endblock %}
+
+{% block styles %}
+<style>
+    .film-container {
+        display: flex;
+        gap: 30px;
+        padding: 30px;
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+    .film-poster {
+        flex: 1;
+        max-width: 500px;
+    }
+    .film-poster img {
+        width: 100%;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+    .film-details {
+        flex: 1;
+    }
+    .film-title {
+        font-size: 2em;
+        margin-bottom: 20px;
+        color: #4CAF50;
+    }
+    .film-meta {
+        margin-bottom: 20px;
+        color: #aaa;
+    }
+    .film-description {
+        margin-bottom: 30px;
+        line-height: 1.6;
+    }
+    .film-section {
+        margin-bottom: 20px;
+    }
+    .film-section h3 {
+        color: #4CAF50;
+        margin-bottom: 10px;
+    }
+    .country-map {
+        width: 100%;
+        height: 300px;
+        object-fit: cover;
+        border-radius: 10px;
+        margin-top: 10px;
+    }
+    .film-actions {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+        padding-top: 20px;
+        border-top: 1px solid #333;
+    }
+    .film-actions .btn {
+        padding: 10px 20px;
+        border-radius: 5px;
+        border: none;
+        cursor: pointer;
+        font-weight: bold;
+        transition: all 0.3s;
+        text-decoration: none;
+        display: inline-block;
+        text-align: center;
+    }
+    .btn-back {
+        background: #4CAF50;
+        color: white;
+    }
+    .btn-watched {
+        background: #2196F3;
+        color: white;
+    }
+    .btn-favorite {
+        background: {{ '#ff5252' if is_favorite else '#607d8b' }};
+        color: white;
+    }
+    .btn i {
+        margin-right: 8px;
+    }
+    .movie-actions {
+        display: flex;
+        gap: 10px;
+        margin: 20px 0;
+        padding: 15px 0;
+        border-top: 1px solid #333;
+        border-bottom: 1px solid #333;
+    }
+
+    /* Общие стили для кнопок */
+    .btn {
+        padding: 8px 16px;
+        border-radius: 4px;
+        font-size: 0.9em;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        border: none;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        text-decoration: none;
+    }
+
+    .btn i {
+        margin-right: 6px;
+    }
+
+    /* Стиль для кнопки "Редактировать" */
+    .btn-primary {
+        background-color: #2196F3;
+        color: white;
+    }
+
+    .btn-primary:hover {
+        background-color: #0b7dda;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+
+    /* Стиль для кнопки "Удалить" */
+    .btn-danger {
+        background-color: #f44336;
+        color: white;
+    }
+
+    .btn-danger:hover {
+        background-color: #d32f2f;
+        transform: translateY(-1px);
+        box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+    }
+    .film-admin-info {
+        margin: 25px 0;
+        padding: 15px;
+        background-color: #252525;
+        border-radius: 8px;
+    }
+
+    .film-admin-info h3 {
+        color: #6a5acd;
+        margin-bottom: 10px;
+    }
+
+    .admin-meta {
+        color: #aaa;
+        font-size: 0.9em;
+    }
+
+    .admin-meta p {
+        margin: 8px 0;
+        display: flex;
+        align-items: center;
+    }
+
+    .admin-meta i {
+        margin-right: 10px;
+        width: 20px;
+        text-align: center;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="film-container">
+    <div class="film-poster">
+        {% if url_bool == False %}
+        <img src="{{ film.picture }}" alt="{{ film.name }}">
+        {% else %}
+        <img src="{{ url_for('static', filename='uploads/movies/' + film.picture) }}" alt="{{ film.name }}">
+        {% endif %}
+    </div>
+
+    <div class="film-details">
+        <h1 class="film-title">{{ film.name }}</h1>
+
+        <div class="film-meta">
+            <span>{{ film.year }} год</span> |
+            <span>{{ film.genre }}</span> |
+            <span>★ {{ film.rating }}/10</span>
+        </div>
+
+        {% if role == 'admin' and film.author_id == user_data.id %}
+        <div class="film-admin-info">
+            <h3>Информация для автора</h3>
+            <div class="admin-meta">
+                <p><i class="fas fa-calendar-plus"></i> Добавлен: {{ film.created_at }}</p>
+                {% if film.updated_at %}
+                <p><i class="fas fa-calendar-edit"></i> Последнее редактирование: {{ film.updated_at }}</p>
+                {% else %}
+                <p><i class="fas fa-calendar-edit"></i> Никогда не редактировался</p>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="film-description" style="min-height: {{ desc_height }};">
+            <p>{{ film.description }}</p>
+        </div>
+
+        <div class="film-section">
+            <h3>Актеры</h3>
+            <p>{{ film.actors }}</p>
+        </div>
+
+        <div class="film-section">
+            <h3>Страна производства</h3>
+            <p>{{ film.country }}</p>
+            {% if map_image %}
+            <img src="{{ url_for('static', filename='uploads/' + map_image) }}"
+                 alt="Карта {{ film.country }}" class="country-map">
+            {% endif %}
+        </div>
+
+        <!-- Блок с кнопками -->
+        {% if role == 'admin' and film.author_id == user_data.id %}
+        <div class="movie-actions">
+            <a href="{{ url_for('edit_movie', movie_id=film.id) }}" class="btn btn-primary">Редактировать</a>
+            <form method="POST" action="{{ url_for('delete_movie', movie_id=film.id) }}" style="display: inline;">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-danger" onclick="return confirm('Удалить фильм?')">Удалить</button>
+            </form>
+        </div>
+        {% endif %}
+        <div class="film-actions">
+            <a href="{{ url_for('index') }}" class="btn btn-back">
+                <i class="fas fa-arrow-left"></i> Назад к фильмам
+            </a>
+
+            {% if not is_watched %}
+            <form method="POST" action="{{ url_for('add_watched', movie_id=film.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-watched">
+                    <i class="fas fa-eye"></i> Добавить в просмотренные
+                </button>
+            </form>
+            {% else %}
+            <span class="btn btn-watched" style="background: #4CAF50;">
+                <i class="fas fa-check"></i> Просмотрено
+            </span>
+            {% endif %}
+
+            <form method="POST" action="{{ url_for('toggle_favorite', movie_id=film.id) }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+                <button type="submit" class="btn btn-favorite">
+                    {% if is_favorite %}
+                        <i class="fas fa-heart"></i> Удалить из избранного
+                    {% else %}
+                        <i class="far fa-heart"></i> В избранное
+                    {% endif %}
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Только Font Awesome для иконок -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+{% endblock %}

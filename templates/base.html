@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Кинотека{% endblock %}</title>
+    <style>
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
+        .header {
+            background-color: #1a1a1a;
+            padding: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.5);
+        }
+        .search-box {
+            display: flex;
+            gap: 10px;
+        }
+        .search-box input {
+            padding: 8px 15px;
+            border-radius: 20px;
+            border: none;
+            background-color: #333;
+            color: white;
+        }
+        .auth-buttons a {
+            color: white;
+            text-decoration: none;
+            margin-left: 15px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            background-color: #4CAF50;
+            transition: background-color 0.3s;
+        }
+        .auth-buttons a:hover {
+            background-color: #45a049;
+        }
+        .user-greeting {
+            color: white;
+        }
+        .flash-message {
+            padding: 10px;
+            margin: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+        .flash-success {
+            background-color: #4CAF50;
+            color: white;
+        }
+        .flash-error {
+            background-color: #f44336;
+            color: white;
+        }
+        .search-container {
+            position: relative;
+            width: 300px;
+            margin-right: 20px;
+        }
+
+        .search-form {
+            display: flex;
+        }
+
+        #search-input {
+            width: 100%;
+            padding: 10px 15px;
+            border: 2px solid #333;
+            border-radius: 25px;
+            background-color: #1e1e1e;
+            color: white;
+            font-size: 16px;
+            transition: all 0.3s;
+        }
+
+        #search-input:focus {
+            outline: none;
+            border-color: #4CAF50;
+        }
+
+        .profile-btn {
+            color: white;
+            text-decoration: none;
+            margin-left: 15px;
+            padding: 8px 15px;
+            border-radius: 20px;
+            background-color: #6a5acd;
+            transition: background-color 0.3s;
+        }
+
+        .profile-btn:hover {
+            background-color: #5a4cad;
+        }
+
+        .profile-btn i {
+            margin-right: 5px;
+        }
+    </style>
+    {% block styles %}{% endblock %}
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+</head>
+<body>
+    <header class="header">
+        <div class="search-container">
+            <form action="/search" method="GET" class="search-form">
+                <input type="text" name="query" id="search-input" placeholder="Поиск фильма..." autocomplete="off">
+                <button type="submit" style="background-color: #333; border-radius: 20%;"><i class="fas fa-search"></i></button>
+            </form>
+        </div>
+        <div class="auth-buttons">
+            {% if current_user %}
+                <a href="{{ url_for('profile') }}" class="profile-btn">
+                    <i class="fas fa-user"></i> Профиль
+                </a>
+                <a href="{{ url_for('logout') }}" class="logout-btn">Выйти</a>
+            {% else %}
+                <a href="{{ url_for('login') }}">Войти</a>
+                <a href="{{ url_for('register') }}">Регистрация</a>
+            {% endif %}
+        </div>
+    </header>
+
+    <div class="container">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash-message flash-{{ category }}">{{ message }}</div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </div>
+</body>
+</html>

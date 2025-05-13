@@ -1,0 +1,132 @@
+{% extends "auth_form.html" %}
+
+{% block form_title %}Регистрация{% endblock %}
+
+{% block form_content %}
+<style>
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    .form-group label {
+        display: block;
+        margin-bottom: 0.5rem;
+        font-weight: 500;
+    }
+    .form-group input[type="text"],
+    .form-group input[type="email"],
+    .form-group input[type="password"] {
+        width: 100%;
+        padding: 0.75rem;
+        border: 1px solid #ced4da;
+        border-radius: 0.25rem;
+        font-size: 1rem;
+    }
+    .role-selector {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    .role-selector input[type="radio"] {
+        display: none;
+
+    }
+    .role-selector label {
+        padding: 0.5rem 1rem;
+        border: 1px solid #dee2e6;
+        border-radius: 0.25rem;
+        cursor: pointer;
+        transition: all 0.2s;
+        background-color: #1e1e1e;
+        color: white;
+    }
+    .role-selector input[type="radio"]:checked + label {
+        background-color: #4CAF50;
+        color: #1e1e1e;
+        border-color: white;
+    }
+    .role-selector label:hover {
+        background-color: #5c636a;
+    }
+    .submit-btn {
+        width: 100%;
+        padding: 0.75rem;
+        background-color: #4CAF50;
+        color: #1e1e1e;
+        border: none;
+        border-radius: 0.25rem;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: background-color 0.2s;
+    }
+    .submit-btn:hover {
+        background-color: #5c636a;
+        color: white;
+    }
+    .auth-link {
+        margin-top: 1.5rem;
+        text-align: center;
+    }
+    .auth-link a {
+        color: #4CAF50;
+        text-decoration: none;
+    }
+    .auth-link a:hover {
+        text-decoration: underline;
+    }
+    .home-button {
+        display: inline-block;
+        margin-top: 1rem;
+        padding: 0.5rem 1rem;
+        background-color: #333;
+        color: white;
+        border-radius: 0.25rem;
+        text-decoration: none;
+        transition: background-color 0.2s;
+    }
+    .home-button:hover {
+        background-color: #5c636a;
+        color: white;
+        text-decoration: none;
+    }
+</style>
+<form method="POST" action="{{ url_for('register') }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+    <div class="form-group">
+        <label for="username">Имя пользователя</label>
+        <input type="text" id="username" name="username" required>
+    </div>
+
+    <div class="form-group">
+        <label for="email">Email</label>
+        <input type="email" id="email" name="email" required>
+    </div>
+
+    <div class="form-group">
+        <label for="password">Пароль (минимум 8 символов)</label>
+        <input type="password" id="password" name="password" required minlength="8">
+    </div>
+
+    <div class="form-group">
+        <label>Роль:</label>
+        <div class="role-selector">
+            <input type="radio" id="user_role" name="role" value="user" checked>
+            <label for="user_role">Пользователь</label>
+
+            <input type="radio" id="admin_role" name="role" value="admin">
+            <label for="admin_role">Администратор</label>
+        </div>
+    </div>
+
+    <button type="submit" class="submit-btn">Зарегистрироваться</button>
+</form>
+{% endblock %}
+
+{% block auth_link %}
+<div class="auth-link">
+    Уже есть аккаунт? <a href="{{ url_for('login') }}">Войдите</a>
+    <div style="margin-top: 15px;">
+        <a href="{{ url_for('index') }}" class="home-button">Назад к фильмам</a>
+    </div>
+</div>
+{% endblock %}

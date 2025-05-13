@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}Редактировать фильм - {{ film.name }}{% endblock %}
+
+{% block styles %}
+<style>
+    .edit-movie-container {
+        max-width: 800px;
+        margin: 30px auto;
+        padding: 30px;
+        background-color: #1e1e1e;
+        border-radius: 10px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+    }
+
+    .edit-movie-container h2 {
+        color: #6a5acd;
+        margin-bottom: 20px;
+        text-align: center;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-group label {
+        display: block;
+        margin-bottom: 8px;
+        color: #aaa;
+    }
+
+    .form-control {
+        width: 100%;
+        padding: 10px;
+        background-color: #252525;
+        border: 1px solid #333;
+        border-radius: 4px;
+        color: white;
+    }
+
+    textarea.form-control {
+        min-height: 120px;
+        resize: vertical;
+    }
+
+    .btn-submit {
+        background-color: #4CAF50;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        transition: background-color 0.3s;
+    }
+
+    .btn-submit:hover {
+        background-color: #45a049;
+    }
+
+    .form-row {
+        display: flex;
+        gap: 20px;
+    }
+
+    .form-col {
+        flex: 1;
+    }
+
+    .error-message {
+        color: #ff5252;
+        font-size: 0.9em;
+        margin-top: 5px;
+    }
+
+    .current-poster {
+        margin-top: 15px;
+        max-width: 300px;
+        border-radius: 5px;
+        border: 2px solid #6a5acd;
+    }
+
+    .poster-section {
+        margin-bottom: 25px;
+    }
+
+    .actions-section {
+        display: flex;
+        gap: 15px;
+        margin-top: 30px;
+    }
+
+    .btn-cancel {
+        background-color: #f44336;
+        color: white;
+        padding: 12px 20px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 16px;
+        width: 100%;
+        text-align: center;
+        text-decoration: none;
+        transition: background-color 0.3s;
+    }
+
+    .btn-cancel:hover {
+        background-color: #d32f2f;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="edit-movie-container">
+    <h2>Редактировать фильм: {{ film.name }}</h2>
+    <form method="POST" enctype="multipart/form-data">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
+
+        <div class="form-group">
+            <label for="name">Название фильма *</label>
+            <input type="text" value="{{ film.name }}" class="form-control" id="name" name="name" required>
+            {% if errors and 'name' in errors %}
+                <p class="error-message">{{ errors['name'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-row">
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="genre">Жанр *</label>
+                    <input type="text" value="{{ film.genre }}" class="form-control" id="genre" name="genre" required>
+                    {% if errors and 'genre' in errors %}
+                        <p class="error-message">{{ errors['genre'] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="year">Год выпуска *</label>
+                    <input type="number" value="{{ film.year }}" class="form-control" id="year" name="year"
+                           min="1900" max="{{ current_year }}" required>
+                    {% if errors and 'year' in errors %}
+                        <p class="error-message">{{ errors['year'] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Описание *</label>
+            <textarea class="form-control" id="description" name="description" required>{{ film.description }}</textarea>
+            {% if errors and 'description' in errors %}
+                <p class="error-message">{{ errors['description'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-row">
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="country">Страна *</label>
+                    <input type="text" value="{{ film.country }}" class="form-control" id="country" name="country" required>
+                    {% if errors and 'country' in errors %}
+                        <p class="error-message">{{ errors['country'] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+            <div class="form-col">
+                <div class="form-group">
+                    <label for="rating">Рейтинг (0-10)</label>
+                    <input type="number" value="{{ film.rating if film.rating else '' }}" class="form-control" id="rating" name="rating"
+                           min="0" max="10" step="0.1" placeholder="Оставьте пустым, если нет рейтинга">
+                    {% if errors and 'rating' in errors %}
+                        <p class="error-message">{{ errors['rating'] }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="actors">Актеры (через запятую)</label>
+            <input type="text" value="{{ film.actors }}" class="form-control" id="actors" name="actors">
+            {% if errors and 'actors' in errors %}
+                <p class="error-message">{{ errors['actors'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="form-group poster-section">
+            <label for="picture">Постер фильма</label>
+            {% if film.picture %}
+                <div>
+                    <p>Текущий постер:</p>
+                    <img src="{{ film.picture if film.picture.startswith('http') else url_for('static', filename='uploads/movies/' + film.picture) }}"
+                         alt="Текущий постер {{ film.name }}" class="current-poster">
+                </div>
+                <div class="form-check" style="margin: 10px 0;">
+                    <input type="checkbox" class="form-check-input" id="remove_picture" name="remove_picture">
+                    <label class="form-check-label" for="remove_picture">Удалить текущий постер</label>
+                </div>
+            {% endif %}
+            <input type="file" class="form-control" id="picture" name="picture" accept="image/*">
+            <p class="hint">Оставьте пустым, если не хотите менять постер</p>
+            {% if errors and 'picture' in errors %}
+                <p class="error-message">{{ errors['picture'] }}</p>
+            {% endif %}
+        </div>
+
+        <div class="actions-section">
+            <button type="submit" class="btn-submit">Сохранить изменения</button>
+            <a href="{{ url_for('film', film_name=film.name) }}" class="btn-cancel">Отмена</a>
+        </div>
+    </form>
+</div>
+{% endblock %}
